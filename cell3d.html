@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>الخلية ثلاثية الأبعاد</title>
+<style>
+:root{--bg:#f4f7f2;--fg:#1d2b22;--card:#fff;--bd:#cfdccf;--ac:#2e7d4f;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#121a15;--fg:#e8f0ea;--card:#1c2822;--bd:#33463b;--ac:#6fcf97}}
+:root[data-theme="dark"]{--bg:#121a15;--fg:#e8f0ea;--card:#1c2822;--bd:#33463b;--ac:#6fcf97}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);font-family:system-ui,-apple-system,"Segoe UI",Tahoma,sans-serif}
+h1{font-size:18px;margin:10px 12px 2px}
+p.s{margin:0 12px 6px;font-size:12px;opacity:.75}
+#cv{width:100%;height:52vh;min-height:300px;display:block;touch-action:none;background:radial-gradient(circle,var(--card),var(--bg))}
+.row{display:flex;flex-wrap:wrap;gap:8px;align-items:center;padding:8px 12px}
+.row input{flex:1;min-width:90px}
+button{font:inherit;font-size:13px;border:1px solid var(--bd);background:var(--card);color:var(--fg);border-radius:18px;padding:6px 12px}
+button.on{background:var(--ac);color:#fff;border-color:var(--ac)}
+#chips{display:flex;flex-wrap:wrap;gap:6px;padding:0 12px}
+#info{margin:10px 12px 16px;padding:12px;background:var(--card);border:1px solid var(--bd);border-radius:12px;font-size:14px;line-height:1.7}
+#info b{font-size:16px;color:var(--ac)}
+#lbl{position:absolute;transform:translateX(-50%);background:var(--ac);color:#fff;padding:3px 12px;border-radius:14px;font-size:13px;display:none;pointer-events:none;z-index:5;white-space:nowrap}
+</style></head><body>
+<h1>🔬 نموذج الخلية ثلاثي الأبعاد</h1>
+<p class="s">اسحب للتدوير، اقرص أو استخدم المنزلق للتكبير، واضغط على أي عضية لشرحها</p>
+<canvas id="cv"></canvas><div id="lbl"></div>
+<div class="row"><span>🔍</span><input type="range" id="z" min="2" max="20" step="0.1" value="13" style="direction:ltr"><button id="m">الغشاء: شفاف</button><button id="r">تدوير</button><button id="a">عرض الكل</button><button id="v" class="on">🔊</button><button id="l">🗣 اسمع</button><button id="g">🎙 غيّر الصوت</button></div>
+<div id="chips"></div>
+<div id="nt" style="margin:0 12px;font-size:12px;color:#c0392b"></div>
+<div id="info"><b>الخلية</b><br>اضغط على جزء من النموذج أو اختر اسمه من الأزرار لعرض وظيفته.</div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+const D={
+cell:["الخلية","Cell","هي الوحدة الأساسية في التركيب والوظيفة لجميع الكائنات الحية؛ فكل جسم حي يتكون من خلية واحدة أو أكثر، وتختلف الخلايا في الشكل والحجم والوظيفة لكنها جميعاً تحتوي على مادة حية.","من العالم الذي شاهد الخلايا الحية أول مرة؟ (روبرت هوك)"],
+mem:["الغشاء البلازمي","Plasma membrane","غشاء رقيق يحيط بمكونات الخلية ويفصلها عن الوسط الخارجي، ويتحكم في دخول المواد الضرورية إلى الخلية وخروج الفضلات منها.","ما وظيفة الغشاء البلازمي؟"],
+cyt:["السايتوبلازم","Cytoplasm","يشكل المادة الأكبر في تكوين الخلية وتنغرس فيه عضيات الخلية الأخرى، وهو مادة هلامية تتكون من الماء والبروتينات والدهون."],
+nuc:["النواة","Nucleus","جسم كروي أو شبه كروي غالباً ما يتوسط الخلية، يحيط به الغلاف النووي الذي يفصل محتوياته عن السايتوبلازم، ويحتوي على السائل النووي والنوية والكروموسومات. تتحكم النواة بجميع أنشطة الخلية، وهي مسؤولة عن نقل الصفات الوراثية من الآباء إلى الأبناء."],
+nol:["النوية","Nucleolus","تركيب يوجد داخل النواة (جسم داخل النواة) ويشارك في تكوين الرايبوسومات."],
+chr:["الكروموسومات","Chromosomes","(الصبغيات) خيوط واحدة أو أكثر داخل النواة، وهي المادة الوراثية التي تحدد صفات الكائن الحي وتنقلها من الآباء إلى الأبناء."],
+rib:["الرايبوسومات","Ribosomes","تؤدي وظيفة حيوية مهمة جداً في الخلية، فهي تقوم ببناء البروتينات اللازمة للخلية، وهي إما أن تكون حرة التحرك في السايتوبلازم أو مرتبطة بالشبكة البلازمية الخشنة."],
+er:["الشبكة البلازمية","Endoplasmic reticulum","تتكون من شبكة من الأنابيب والحويصلات المحاطة بغشاء، وتكون خشنة إذا ارتبطت بها الرايبوسومات (تصنع البروتينات) أو ملساء إذا خلت منها.","ما الفرق بين الشبكة البلازمية الداخلية الخشنة والملساء؟"],
+gol:["جهاز كولجي","Golgi apparatus","يتكون من تراكيب غشائية أو حويصلات تختلف في الشكل والحجم من خلية لأخرى، ويوجد بالقرب من النواة. يسهم في إفراز مواد كثيرة مثل الهرمونات والإنزيمات، فضلاً عن السكريات المعقدة والبروتينات."],
+mit:["المايتوكوندريا","Mitochondria","تراكيب أسطوانية محاطة بغشاء مزدوج؛ الغشاء الداخلي يتألف من طيات تشبه الصفائح، والغشاء الخارجي يحيط بالداخلي ويكون خالياً من الطيات. تعد مراكز لتحرير الطاقة في الخلية."],
+lys:["الجسيمات الحالّة","Lysosomes","تحتوي إنزيمات تهضم المواد الغذائية والعضيات التالفة."]};
+Object.assign(D,{
+cell:["الخلية","Cell","نظرية الخلية: ١) جميع الكائنات الحية تتكون من خلية أو أكثر. ٢) الخلية هي الوحدة الأساسية في التركيب والوظيفة لأجسام جميع الكائنات الحية. ٣) تنتج الخلايا الجديدة من خلايا موجودة أصلاً. وتحتوي جميعها على مادة حية تسمى البروتوبلازم، وهي ما يميز الخلايا الحية عن غير الحية.","من العالم الذي شاهد الخلايا الحية أول مرة؟ (روبرت هوك)"],
+mem:["الغشاء البلازمي","Plasma membrane","غشاء حي رقيق جداً يحيط بالسايتوبلازم ليحمي مكوناته، ويتحكم في دخول المواد إلى الخلية وخروجها منها. يشبه الحدود الخارجية لأي بلد، ففيها نقاط مراقبة وتفتيش تتحكم بكل شيء يدخل ويخرج. ويتألف من مواد دهنية ومواد بروتينية.","ما وظيفة الغشاء البلازمي؟"],
+cyt:["السايتوبلازم","Cytoplasm","يشكل المادة الأكبر في تكوين الخلية، وتنغرس فيه عضيات الخلية الأخرى، وهو مادة شفافة هلامية تتكون من الماء والبروتينات والدهون."],
+nuc:["النواة","Nucleus","جسم كروي أو شبه كروي غالباً ما يتوسط الخلية، يحيط به الغلاف النووي (وفيه ثقوب) الذي يفصل محتوياتها عن السايتوبلازم، وتحتوي على السائل النووي والنوية والكروموسومات. تتحكم بجميع أنشطة الخلية، وتنقل الصفات الوراثية من الآباء إلى الأبناء، وهي مستودع المادة الوراثية التي تحدد صفات الكائن الحي."],
+nol:["النوية","Nucleolus","تركيب يوجد داخل النواة، ويوجد في النواة نوية واحدة أو أكثر."],
+chr:["الكروموسومات","Chromosomes","(الصبغيات) توجد في النواة وهي المادة الوراثية التي تحدد صفات الكائن الحي وتنتقل من الآباء إلى الأبناء."],
+er:["الشبكة البلازمية الداخلية","Endoplasmic reticulum","تتكون من شبكة من الأنابيب والحويصلات المحاطة بغشاء، تتصل بالنواة من جهة وبالغشاء البلازمي من الجهة الأخرى. يوجد منها نوعان: الخشنة والملساء، وتتميز الخشنة باحتواء سطوحها على الرايبوسومات.","ما الفرق بين الشبكة البلازمية الداخلية الخشنة والملساء؟"],
+lys:["الجسيمات الحالّة","Lysosomes","عضيات محاطة بغشاء أحادي الطبقة، حاوية على مواد لها القدرة على هضم الجزيئات الكبيرة كجزيئات البروتينات إلى وحدات أصغر، وهضم بعض الدقائق الغذائية والفضلات وغيرها من الشوائب. وتعد وحدات لتنظيف الخلية."],
+fla:["الأهداب والأسواط","Cilia and flagella","تراكيب توجد في بعض أنواع الخلايا، وظيفتها الحركة. (الأهداب قصيرة وكثيرة، والسوط طويل)."]
+});
+const cv=document.getElementById('cv');
+const R=new THREE.WebGLRenderer({canvas:cv,antialias:true,alpha:true});
+R.setPixelRatio(Math.min(devicePixelRatio,2));
+const S=new THREE.Scene(),C=new THREE.PerspectiveCamera(45,1,.1,100);
+S.add(new THREE.AmbientLight(0xffffff,.7));
+const L=new THREE.DirectionalLight(0xffffff,.9);L.position.set(5,8,10);S.add(L);
+const G=new THREE.Group();S.add(G);
+const pick=[];
+function mk(g,col,key,o={}){const m=new THREE.Mesh(g,new THREE.MeshPhongMaterial(Object.assign({color:col,shininess:40},o)));m.userData.k=key;G.add(m);pick.push(m);return m}
+const mem=mk(new THREE.SphereGeometry(5,48,36),0x8cc63f,'mem',{transparent:true,opacity:.38,depthWrite:false,side:THREE.DoubleSide});
+mem.scale.set(1.15,.85,.85);
+const cytM=new THREE.Mesh(new THREE.SphereGeometry(4.85,40,28),new THREE.MeshPhongMaterial({color:0xfff3a0,transparent:true,opacity:.3,depthWrite:false}));cytM.scale.set(1.15,.85,.85);G.add(cytM);
+const nuc=mk(new THREE.SphereGeometry(1.7,40,30),0xf08aa8,'nuc',{transparent:true,opacity:.65});
+mk(new THREE.SphereGeometry(.5,24,18),0x7e4fb0,'nol').position.set(.3,.2,.7);
+for(let i=0;i<6;i++){const c=mk(new THREE.CylinderGeometry(.05,.05,.9,8),0x5a2d82,'chr');c.position.set(-.6+i*.25,-.5+(i%3)*.4,-.4+(i%2)*.5);c.rotation.set(i,i*2,i*.5)}
+const rnd=(a,b)=>a+Math.random()*(b-a);
+for(let i=0;i<7;i++){const t=mk(new THREE.TorusGeometry(2.4+i*.12,.13,10,48),0x4a7fa8,'er');t.rotation.set(rnd(0,3),rnd(0,3),rnd(0,3));t.scale.set(1.15,1,1)}
+[[2.8,1,.5],[-2.8,-1,1],[1.5,-2.4,1.5],[-1.8,2,-2],[3.5,-1.3,-1.2]].forEach((p,i)=>{const m=mk(new THREE.SphereGeometry(.55,24,16),0xb5524c,'mit');m.scale.set(1.9,1,1);m.position.set(...p);m.rotation.set(i,i*1.3,i*.7);
+const d=new THREE.Mesh(new THREE.TorusGeometry(.35,.05,8,20),new THREE.MeshPhongMaterial({color:0x8a2f2f}));d.scale.set(1.9,1,1);m.add(d)});
+for(let i=0;i<5;i++){const m=mk(new THREE.SphereGeometry(1,24,12),0xe8a43c,'gol');m.scale.set(1.4-Math.abs(i-2)*.15,.1,.7);m.position.set(-.5,3+i*.28,-1.5)}
+for(let i=0;i<6;i++){const m=mk(new THREE.SphereGeometry(.28,16,12),0xf0c060,'lys');m.position.set(rnd(-4,4),rnd(-2.5,-1),rnd(-2.5,2.5))}
+for(let i=0;i<45;i++){const u=new THREE.Vector3(rnd(-1,1),rnd(-1,1),rnd(-1,1)).normalize();const n=new THREE.Vector3(u.x/1.15,u.y/.85,u.z/.85).normalize();
+const c=mk(new THREE.CylinderGeometry(.04,.04,.55,6),0x6aa84f,'fla');c.position.set(u.x*5.75+n.x*.25,u.y*4.25+n.y*.25,u.z*4.25+n.z*.25);c.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0),n)}
+mk(new THREE.TubeGeometry(new THREE.CatmullRomCurve3([new THREE.Vector3(5.7,0,0),new THREE.Vector3(6.4,.5,0),new THREE.Vector3(7.1,-.5,.3),new THREE.Vector3(7.8,.5,0),new THREE.Vector3(8.4,-.3,-.2)]),40,.1,8),0x3d8a3d,'fla');
+const rg=new THREE.SphereGeometry(.09,8,6);
+for(let i=0;i<110;i++){let p;do{p=new THREE.Vector3(rnd(-5,5),rnd(-3.8,3.8),rnd(-3.8,3.8))}while(Math.hypot(p.x/5.4,p.y/3.9,p.z/3.9)>.95||p.length()<2.3);
+const m=mk(rg,0x333333,'rib');m.position.copy(p)}
+let sel=null,auto=true,touching=false,dist=13,ry=0,rx=.3,tdist=null,aln=0,fp=new THREE.Vector3(),ft=new THREE.Vector3();
+const wrap=a=>((a+Math.PI)%(2*Math.PI)+2*Math.PI)%(2*Math.PI)-Math.PI;
+function show(k){document.querySelectorAll('#chips button').forEach(b=>b.classList.toggle('on',b.dataset.k===k));
+mem.material.opacity=k==='mem'?.8:(clear?.38:.75);cytM.material.opacity=k==='cyt'?.65:.3;const d=D[k];speak(d[0]+'. '+d[2]);document.getElementById('info').innerHTML='<b>'+d[0]+'</b> <span dir="ltr">('+d[1]+')</span><br>'+d[2]+(d[3]?'<br><small>❓ سؤال الكتاب: '+d[3]+'</small>':'');
+pick.forEach(m=>{if(m.material.emissive)m.material.emissive.setHex(m.userData.k===k&&k!=='mem'?0x444444:0)});}
+const ch=document.getElementById('chips');
+Object.keys(D).forEach(k=>{const b=document.createElement('button');b.textContent=D[k][0];b.dataset.k=k;b.onclick=()=>{show(k);focus(k)};ch.appendChild(b)});
+function rb(){document.getElementById('r').classList.toggle('on',auto)}rb();
+document.getElementById('r').onclick=()=>{auto=!auto;rb()};
+let clear=true;const mb=document.getElementById('m');
+mb.onclick=()=>{clear=!clear;mem.material.opacity=clear?.38:.75;mb.textContent='الغشاء: '+(clear?'شفاف':'معتم')};
+const z=document.getElementById('z');z.oninput=()=>{dist=+z.value;tdist=null};
+function setD(v){tdist=null;dist=Math.min(20,Math.max(2,v));z.value=dist}
+let snd=true;
+let lastT='',vi=-1;
+function note(m){document.getElementById('nt').textContent=m}
+function speak(t){lastT=t;note('');try{const s=window.speechSynthesis;if(!s||typeof SpeechSynthesisUtterance==='undefined'){note('⚠ هذا العرض لا يدعم الصوت. افتح الرابط في متصفح كروم أو سافاري.');return}
+s.cancel();if(!snd)return;const av=s.getVoices().filter(x=>x.lang&&x.lang.toLowerCase().startsWith('ar'));const v=(vi>=0&&av[vi])||av.find(x=>/female|laila|layla|salma|hoda|zira|amira|noura|mariam|maryam|sara|fatima|hala/i.test(x.name))||av[0];
+t.split(/[.؟]\s*/).filter(x=>x.trim()).forEach(p=>{const u=new SpeechSynthesisUtterance(p);u.lang='ar-SA';u.rate=.85;u.pitch=1.2;if(v)u.voice=v;s.speak(u)});
+if(!v)note('ℹ لا يوجد صوت عربي مثبت في جوالك؛ حمّل اللغة العربية من إعدادات تحويل النص إلى كلام.');
+setTimeout(()=>{if(snd&&!s.speaking&&!s.pending)note('⚠ لم يبدأ الصوت. افتح الرابط في كروم أو سافاري، أو تأكد من تثبيت صوت عربي.')},1500)}catch(e){note('⚠ تعذّر تشغيل الصوت.')}}
+document.getElementById('l').onclick=()=>{if(lastT)speak(lastT)};
+document.getElementById('g').onclick=()=>{try{const av=speechSynthesis.getVoices().filter(x=>x.lang&&x.lang.toLowerCase().startsWith('ar'));if(!av.length){note('لا توجد أصوات عربية في جوالك.');return}vi=(vi+1)%av.length;speak(lastT||'مرحبا بكم في نموذج الخلية');note('الصوت '+(vi+1)+' من '+av.length+': '+av[vi].name)}catch(e){}};
+document.getElementById('v').onclick=e=>{snd=!snd;e.target.classList.toggle('on',snd);e.target.textContent=snd?'🔊':'🔇';if(!snd){try{speechSynthesis.cancel()}catch(x){}}};
+const DT={nuc:6,nol:3.5,chr:3.5,rib:3,er:6,gol:4.5,mit:4,lys:3,fla:6,mem:6,cell:13,cyt:5.5};
+function place(){const r=cv.getBoundingClientRect(),l=document.getElementById('lbl');l.style.left=(r.left+r.width/2+scrollX)+'px';l.style.top=(r.top+r.height/2+scrollY-56)+'px'}
+function focus(k,obj){const whole=(k==='cell');if(!obj){if(k==='mem')obj={position:new THREE.Vector3(5.75,0,0)};else if(k==='cyt')obj={position:new THREE.Vector3(0,-3.3,.5)};else if(!whole)obj=pick.find(m=>m.userData.k===k)}
+ft.copy(whole||!obj?new THREE.Vector3():obj.position);tdist=DT[k]||6;aln=80;
+const l=document.getElementById('lbl');l.style.display=k==='cell'?'none':'block';l.textContent='⬇ '+D[k][0];place()}
+document.getElementById('a').onclick=()=>{show('cell');focus('cell')};
+const P=new Map();let pd=0,mv=0;
+cv.addEventListener('pointerdown',e=>{cv.setPointerCapture(e.pointerId);P.set(e.pointerId,e);mv=0;touching=true});
+cv.addEventListener('pointermove',e=>{if(!P.has(e.pointerId))return;const o=P.get(e.pointerId);
+if(P.size===1){ry+=(e.clientX-o.clientX)*.01;rx+=(e.clientY-o.clientY)*.01;rx=Math.max(-1.5,Math.min(1.5,rx));mv+=Math.abs(e.clientX-o.clientX)+Math.abs(e.clientY-o.clientY)}
+P.set(e.pointerId,e);
+if(P.size===2){const[a,b]=[...P.values()];const d=Math.hypot(a.clientX-b.clientX,a.clientY-b.clientY);if(pd)setD(dist*pd/d);pd=d;mv=99}});
+const up=e=>{if(P.size===1&&mv<6){const r=cv.getBoundingClientRect(),v=new THREE.Vector2((e.clientX-r.left)/r.width*2-1,-(e.clientY-r.top)/r.height*2+1);
+const rc=new THREE.Raycaster();rc.setFromCamera(v,C);const h=rc.intersectObjects(pick.filter(m=>m.userData.k!=='mem'||true))[0];
+if(h){let k=h.object.userData.k,hit=h.object;if(k==='mem'){const o=rc.intersectObjects(pick.filter(m=>m.userData.k!=='mem'))[0];if(o){k=o.object.userData.k;hit=o.object}else{const n=h.face.normal.clone().transformDirection(h.object.matrixWorld);k=(-n.dot(rc.ray.direction)<.45)?'mem':'cyt';hit={position:G.worldToLocal(h.point.clone()).multiplyScalar(k==='cyt'?.8:1)}}}show(k);focus(k,hit)}}
+P.delete(e.pointerId);touching=P.size>0;if(P.size<2)pd=0};
+cv.addEventListener('pointerup',up);cv.addEventListener('pointercancel',e=>{P.delete(e.pointerId);touching=P.size>0;pd=0});
+cv.addEventListener('wheel',e=>{e.preventDefault();setD(dist+e.deltaY*.01)},{passive:false});
+function rs(){const w=cv.clientWidth,h=cv.clientHeight;R.setSize(w,h,false);C.aspect=w/h;C.updateProjectionMatrix()}
+addEventListener('resize',()=>{rs();place()});rs();
+(function loop(){requestAnimationFrame(loop);if(tdist!==null){dist+=(tdist-dist)*.08;z.value=dist;if(Math.abs(tdist-dist)<.02)tdist=null}
+fp.lerp(ft,.08);
+if(aln>0&&!touching){aln--;const r=Math.hypot(fp.x,fp.z);if(fp.lengthSq()>.01&&r>.01){ry+=wrap(Math.atan2(-fp.x,fp.z)-ry)*.08;rx+=(Math.max(-1.2,Math.min(1.2,Math.atan2(fp.y,r)))-rx)*.08}}
+if(auto&&!touching&&aln<=0)ry+=.005;
+G.rotation.set(rx,ry,0);G.position.copy(fp.clone().applyEuler(G.rotation)).negate();C.position.set(0,0,dist);C.lookAt(0,0,0);R.render(S,C)})();
+</script></body></html>
